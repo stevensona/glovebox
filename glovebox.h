@@ -25,6 +25,12 @@ namespace glovebox {
 			cond(cond), capacity(capacity), func(func), children() {
 			push_back(seed);
 		}
+		
+		Param(T seed, std::function<bool()> cond, std::function<T()> func) :
+			cond(cond), capacity(max_size()), func(func), children() {
+			push_back(seed);
+		}
+
 
 		void notify(Param *child) {
 			children.push_back(child);

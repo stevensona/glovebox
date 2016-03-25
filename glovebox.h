@@ -36,5 +36,8 @@ namespace glovebox {
 				}
 			}
 		}
+		T operator()() {
+			return back();
+		}
 	};
 }

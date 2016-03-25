@@ -31,3 +31,4 @@ int main(int argc, char ** argv) {
 	system("PAUSE");
 }
 ```
+Because ```parameter`` is a thin wrapper around ```std::vector```, stores and permits access to all of its previous values, in addition to conditional and dependent updates, glovebox is extremely expressive.

@@ -2,7 +2,7 @@
 small header-only c++ library for modelling complex relationships between values
 
 ## example usage
-the following example defines a system that calculates the function ```f(x) = x ^ 2``` between 0 and 10.
+the following simple example defines a system that calculates the function ```f(x) = x ^ 2``` between 0 and 10.
 ```c++
 #include <iostream>
 #include "glovebox.h"

@@ -14,11 +14,11 @@ int main(int argc, char ** argv) {
 
 	Param<vec2> pos, speed;
 
-	pos = Param<vec2>(vec2(0, 0), ALWAYS, [&]() {
+	pos = Param<vec2>(vec2(0, 0), 10, ALWAYS, [&]() {
 		return vec2(pos().x + speed().x, pos().y + speed().y);
 	});
 
-	speed = Param<vec2>(vec2(-1.f, 0.75f), ALWAYS, [&]() {
+	speed = Param<vec2>(vec2(-1.f, 0.75f), 10, ALWAYS, [&]() {
 		vec2 r(speed().x, speed().y);
 		if (pos().x < -4 || pos().x > 4)
 			r.x *= -1;

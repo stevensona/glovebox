@@ -27,8 +27,10 @@ int main(int argc, char ** argv) {
 		return r;
 	});
 
+	speed.notify(&pos);
+
 	for (int i = 0; i < 10; i++) {
-		pos.update();
+		
 		speed.update();
 		cout << pos().x << ", " << pos().y << endl;
 	}

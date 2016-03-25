@@ -8,11 +8,11 @@ int main(int argc, char ** argv) {
 
 	Param<float> x, fx;
 
-	x = Param<float>(0.0f, ALWAYS,
+	x = Param<float>(0.0f, 10, ALWAYS,
 		[&](){ return x() + 1.f; }
 	);
 
-	fx = Param<float>(0.0f, ALWAYS,
+	fx = Param<float>(0.0f, 10, ALWAYS,
 		[&](){ return x() * x(); }
 	);
 

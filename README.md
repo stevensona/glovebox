@@ -31,4 +31,33 @@ int main(int argc, char ** argv) {
 	system("PAUSE");
 }
 ```
-Because ```Param``` is just a thin wrapper around ```std::vector``` and stores and permits access to all previous values, in addition to conditional and dependent update schemes, glovebox is highly expressive and flexible.
+The following is an example of the system wrapper for clearer grouping of related values:
+```c++
+#include <iostream>
+#include <math.h>
+#include "glovebox.h"
+
+int main(int argc, char ** argv) {
+
+	using namespace std;
+	using namespace glovebox;
+	
+	enum class params { tick, func };
+	System<params, float> sys;
+
+	sys.define(params::tick, [&sys]() { return sys(params::tick) + 1; });
+	sys.define(params::func, [&sys]() { return sys(params::tick) * 3 + 1; });
+	sys.setRoot(params::tick);
+	sys.link(params::tick, params::func);
+
+	for (int i = 0; i < 10; i++) {
+		sys.update();
+		cout << sys(params::tick) << ", " << sys(params::func) << endl;
+
+	}
+	system("PAUSE");
+
+}
+```
+
+Because ```Param``` is just a thin wrapper around ```std::deque``` and stores and permits access to all previous values, in addition to conditional and dependent update schemes, glovebox is highly expressive and flexible.

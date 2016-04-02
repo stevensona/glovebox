@@ -1,6 +1,8 @@
+
 #pragma once
 
 #include <iostream>
+#include <map>
 #include <vector>
 #include <deque>
 #include <functional>
@@ -8,33 +10,37 @@
 
 namespace glovebox {
 
-	auto ALWAYS = [](){return true; };
+	const auto ALWAYS = [](){ return true; };
 
-	template <class T>
-	class Param : public std::deque < T > {
+	template <class ParamType>
+	class Param : public std::deque < ParamType > {
+		using funcType = std::function<ParamType()>;
+		using condType = std::function<ParamType()>;
 
-		std::function<bool()> cond;
-		std::function<T()> func;
+		condType cond;
+		funcType func;
 		std::vector<Param*> children;
 		size_type capacity;
 
 	public:
-		Param() : children(){}
+		Param() : children{} {}
 
-		Param(T seed, size_type capacity, std::function<bool()> cond, std::function<T()> func) :
-			cond(cond), capacity(capacity), func(func), children() {
-			push_back(seed);
-		}
-		
-		Param(T seed, std::function<bool()> cond, std::function<T()> func) :
-			cond(cond), capacity(max_size()), func(func), children() {
+		Param(const ParamType seed, const size_type capacity, const condType cond, const funcType func) :
+			cond{ cond }, capacity{ capacity }, func{ func }, children{} {
 			push_back(seed);
 		}
 
-
-		void notify(Param *child) {
-			children.push_back(child);
+		Param(const ParamType seed, const condType cond, const funcType func) :
+			cond{ cond }, capacity{ capacity }, func{ func }, children{} {
+			push_back(seed);
 		}
+
+		template<class ChildType>
+		void notify(ChildType&& child) { children.push_back(child); }
+
+		void setFunction(const funcType func) { this->func = func; }
+
+		void setCondition(const condType cond) { this->cond = cond; }
 
 		void update() {
 			if (cond()) {
@@ -47,8 +53,44 @@ namespace glovebox {
 				}
 			}
 		}
-		T operator()() {
+		ParamType operator()() const {
 			return back();
 		}
+	};
+
+	template <class ParamId, class ParamType>
+	class System {
+		
+		using funcType = std::function<ParamType()>;
+		using condType = std::function<ParamType()>;
+
+		ParamId root;
+		std::map<ParamId, std::unique_ptr<Param<ParamType>>> params;
+
+	public:
+
+		auto operator() (const ParamId param_id) {
+			return (*params.at(param_id))();
+		}
+
+		auto param(const ParamId param_id) {
+			return params.at(param_id).get();
+		}
+
+		void update() {
+			param(root)->update();
+		}
+
+		void setRoot(const ParamId param_id) { root = param_id; }
+
+		void define(const ParamId param_id, const funcType func) {
+			auto param = std::make_unique<Param<ParamType>>(Param<ParamType>(0, ALWAYS, func));
+			params[param_id] = std::move(param);
+		}
+
+		void link(const ParamId src, const ParamId dest) {
+			param(src)->notify(param(dest));
+		}
+
 	};
 }

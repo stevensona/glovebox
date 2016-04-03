@@ -1,10 +1,8 @@
-
 #pragma once
 
 #include <iostream>
 #include <map>
 #include <vector>
-#include <deque>
 #include <functional>
 #include <memory>
 #include <atomic>
@@ -13,87 +11,85 @@ namespace glovebox {
 
 	const auto ALWAYS = [](){ return true; };
 
-
-	template <class ParamType>
-	class Parameter {
-		using funcType = std::function<ParamType()>;
-		using condType = std::function<ParamType()>;
-
-		std::atomic<ParamType> value;
-		condType cond;
-		funcType func;
-		std::vector<Parameter*> children;
-
-	public:
-		Parameter() : children{} {}
-
-		Parameter(const ParamType seed, const condType cond, const funcType func) :
-			value{ seed }, cond { cond }, func{ func }, children{} {}
-
-		Parameter(const Parameter&) = delete;
-		Parameter& operator=(const Parameter&) = delete;
-
-		template<class ChildType>
-		void notify(ChildType&& child) {
-			children.emplace_back(child);
-		}
-
-		void setFunction(const funcType func) {
-			this->func = func; 
-		}
-
-		void setCondition(const condType cond) { 
-			this->cond = cond; 
-		}
-
-		void update() {
-			if (cond()) {
-				value = func();
-				for (const auto child : children) {
-					child->update();
-				}
-			}
-
-		}
-		auto operator()() {
-			return value.load();
-		}
-	};
-
-	template <class ParamType>
-	class Recorder {
-		//weak_ptr not used because System uses unique_ptr, not shared_ptr
-		using paramPtr = Parameter<ParamType>*;
-		using paramData = std::vector<ParamType>;
-		using dataMap = std::map<paramPtr, paramData>;
-
-		std::vector<paramPtr> probes;
-		dataMap data;
-
-	public:
-		void monitor(paramPtr probe) {
-			probes.emplace_back(probe);
-			data[probe] = {};
-		}
-		void capture() {
-			for (auto p : probes) {
-				data[p].emplace_back((*p)());
-			}
-		}
-		void display() {
-			for (auto p : probes) {
-				for (auto d : data[p]) {
-					std::cout << d << ' ';
-				}
-				std::cout << std::endl;
-			}
-		}
-	};
-
-
 	template <class ParamId, class ParamType>
 	class System {
-		
+
+		template <class ParamType>
+		class Parameter {
+			using funcType = std::function<ParamType()>;
+			using condType = std::function<ParamType()>;
+
+			std::atomic<ParamType> value;
+			condType cond;
+			funcType func;
+			std::vector<Parameter*> children;
+
+		public:
+			Parameter() : children{} {}
+
+			Parameter(const ParamType seed, const condType cond, const funcType func) :
+				value{ seed }, cond{ cond }, func{ func }, children{} {}
+
+			Parameter(const Parameter&) = delete;
+			Parameter& operator=(const Parameter&) = delete;
+
+			template<class ChildType>
+			void notify(ChildType&& child) {
+				children.emplace_back(child);
+			}
+
+			void setFunction(const funcType func) {
+				this->func = func;
+			}
+
+			void setCondition(const condType cond) {
+				this->cond = cond;
+			}
+
+			void update() {
+				if (cond()) {
+					value = func();
+					for (const auto child : children) {
+						child->update();
+					}
+				}
+
+			}
+			auto operator()() {
+				return value.load();
+			}
+		};
+
+		template <class ParamType>
+		class Recorder {
+			//weak_ptr not used because System uses unique_ptr, not shared_ptr
+			using paramPtr = Parameter<ParamType>*;
+			using paramData = std::vector<ParamType>;
+			using dataMap = std::map<paramPtr, paramData>;
+
+			std::vector<paramPtr> probes;
+			dataMap data;
+
+		public:
+			void monitor(paramPtr probe) {
+				probes.emplace_back(probe);
+				data[probe] = {};
+			}
+			void capture() {
+				for (auto p : probes) {
+					data[p].emplace_back((*p)());
+				}
+			}
+			void display() {
+				for (auto p : probes) {
+					for (auto d : data[p]) {
+						std::cout << d << ' ';
+					}
+					std::cout << std::endl;
+				}
+			}
+		};
+
 		using funcType = std::function<ParamType()>;
 		using condType = std::function<ParamType()>;
 		using paramPtr = std::unique_ptr<Parameter<ParamType>>;

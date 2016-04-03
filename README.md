@@ -44,4 +44,11 @@ int main(int argc, char ** argv) {
 
 }
 ```
-
+###sample output
+```
+finished in 1032.41
+78 39 87 20 40 52 30 26 41 35 19 31 84 50 59 95 97 50 19 89 55 24 93 63 17 88 55 25 93 60 23 84 25 93 62 9 79 46 14 82 45 15 83 50 17 88 53 23 90 49 16 73 38 69 26 89 50 7 75 40 4 70 37 5
+800 400 890 210 410 530 310 270 430 360 200 320 850 510 610 960 970 510 200 890 560 250 940 630 180 880 570 250 930 600 250 850 270 940 630 100 790 470 150 820 460 160 840 510 180 890 540 230 900 500 170 740 390 700 270 890 510 80 770 410 50 710 380 50
+Press any key to continue . . .
+```
+Note that the second line of output (corresponding to ```func``` parameter (x * 10) does not always appear to actually be x * 10 due to multithreaded execution.

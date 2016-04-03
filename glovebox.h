@@ -7,65 +7,89 @@
 #include <deque>
 #include <functional>
 #include <memory>
+#include <atomic>
 
 namespace glovebox {
 
 	const auto ALWAYS = [](){ return true; };
 
+
 	template <class ParamType>
-	class Param : public std::deque < ParamType > {
+	class Parameter {
 		using funcType = std::function<ParamType()>;
 		using condType = std::function<ParamType()>;
 
+		std::atomic<ParamType> value;
 		condType cond;
 		funcType func;
-		std::vector<Param*> children;
-		size_type capacity;
+		std::vector<Parameter*> children;
 
 	public:
-		Param() : children{} {}
+		Parameter() : children{} {}
 
-		Param(const ParamType seed, const size_type capacity, const condType cond, const funcType func) :
-			cond{ cond }, capacity{ capacity }, func{ func }, children{} {
-			push_back(seed);
-		}
+		Parameter(const ParamType seed, const condType cond, const funcType func) :
+			value{ seed }, cond { cond }, func{ func }, children{} {}
 
-		Param(const ParamType seed, const condType cond, const funcType func) :
-			cond{ cond }, capacity{ capacity }, func{ func }, children{} {
-			push_back(seed);
-		}
+		Parameter(const Parameter&) = delete;
+		Parameter& operator=(const Parameter&) = delete;
 
 		template<class ChildType>
-		void notify(ChildType&& child) { children.push_back(child); }
+		void notify(ChildType&& child) {
+			children.emplace_back(child);
+		}
 
-		void setFunction(const funcType func) { this->func = func; }
+		void setFunction(const funcType func) {
+			this->func = func; 
+		}
 
-		void setCondition(const condType cond) { this->cond = cond; }
+		void setCondition(const condType cond) { 
+			this->cond = cond; 
+		}
 
 		void update() {
 			if (cond()) {
-				push_back(func());
-				if (size() > capacity) {
-					pop_front();
-				}
-				for (auto child : children) {
+				value = func();
+				for (const auto child : children) {
 					child->update();
 				}
 			}
 		}
-		ParamType operator()() const {
-			return back();
+		auto operator()() {
+			return value.load();
 		}
 	};
+
+	template <class ParamType>
+	class Recorder {
+		using paramPtr = std::weak_ptr<Parameter<ParamType>>;
+
+		std::vector<paramPtr> probes;
+		std::vector<ParamType> data;
+
+	public:
+		template<class ProbeType>
+		void monitor(ProbeType &&probe) {
+			probes.emplace_back(probe);
+		}
+		void capture() {
+			for (auto p : probes) {
+
+			}
+		}
+	};
+
 
 	template <class ParamId, class ParamType>
 	class System {
 		
 		using funcType = std::function<ParamType()>;
 		using condType = std::function<ParamType()>;
+		using paramPtr = std::unique_ptr<Parameter<ParamType>>;
+		using paramMap = std::map<ParamId, paramPtr>;
 
 		ParamId root;
-		std::map<ParamId, std::unique_ptr<Param<ParamType>>> params;
+		paramMap params;
+		Recorder<ParamType> recorder;
 
 	public:
 
@@ -81,10 +105,13 @@ namespace glovebox {
 			param(root)->update();
 		}
 
-		void setRoot(const ParamId param_id) { root = param_id; }
+		void setRoot(const ParamId param_id) {
+			root = param_id; 
+		}
 
 		void define(const ParamId param_id, const funcType func) {
-			auto param = std::make_unique<Param<ParamType>>(Param<ParamType>(0, ALWAYS, func));
+			//make_unique not used because Parameter's copy constructor is deleted
+			paramPtr param{ new Parameter<ParamType>{0, ALWAYS, func} };
 			params[param_id] = std::move(param);
 		}
 

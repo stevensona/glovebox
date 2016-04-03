@@ -1,54 +1,45 @@
-# glovebox
+# mission
 small header-only c++ library for modelling complex relationships between values
 
 ## example usage
-the following simple example defines a system that calculates the function ```f(x) = x ^ 2``` between 0 and 10.
-```c++
-#include <iostream>
-#include "glovebox.h"
 
-int main(int argc, char ** argv) {
-
-	using namespace std;
-	using namespace glovebox;
-
-	Param<float> x, fx;
-
-	x = Param<float>(0.0f, 10, ALWAYS, [&](){ return x() + 1.f; });
-	fx = Param<float>(0.0f, 10, ALWAYS, [&](){ return x() * x(); });
-	x.notify(&fx);
-
-	for (int i = 0; i < 10; i++) {
-		x.update();
-		cout << "f(" << x() << ")= " << fx() << endl;
-	}
-	system("PAUSE");
-}
-```
-The following is an example of the system wrapper for clearer grouping of related values:
 ```c++
 #include <iostream>
 #include <math.h>
-#include "glovebox.h"
+#include <chrono>
+#include <thread>
+#include <future>
+#include "mission.h"
 
 int main(int argc, char ** argv) {
 
 	using namespace std;
-	using namespace glovebox;
-	
-	enum class params { tick, func };
-	System<params, float> sys;
+	using namespace std::chrono_literals;
+	using namespace mission;
 
-	sys.define(params::tick, [&sys]() { return sys(params::tick) + 1; });
-	sys.define(params::func, [&sys]() { return sys(params::tick) * 3 + 1; });
+	enum class params { tick, func };
+	System<params, int> sys;
+
+	sys.define(params::tick, [&sys] { return sys(params::tick) + 1; });
+	sys.define(params::func, [&sys] { return sys(params::tick) * 10; });
 	sys.setRoot(params::tick);
 	sys.link(params::tick, params::func);
-
-	for (int i = 0; i < 10; i++) {
+	
+	auto start = chrono::steady_clock::now();
+	
+	sys.startCapture(10ms); //capture values every 10ms
+	for (int i = 0; i < 100000; i++) {
+		if (sys(params::tick) > 100) {
+			sys.set(params::tick, 0); //demonstrates external manipulation of values
+		}
 		sys.update();
-		cout << sys(params::tick) << ", " << sys(params::func) << endl;
-
 	}
+	sys.stopCapture();
+
+	chrono::duration<double, milli> elapsed = chrono::steady_clock::now() - start;
+	cout << "finished in " << elapsed.count() << endl;
+
+	sys.display();
 	system("PAUSE");
 
 }

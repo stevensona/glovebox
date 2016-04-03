@@ -53,6 +53,7 @@ namespace glovebox {
 					child->update();
 				}
 			}
+
 		}
 		auto operator()() {
 			return value.load();
@@ -61,19 +62,30 @@ namespace glovebox {
 
 	template <class ParamType>
 	class Recorder {
-		using paramPtr = std::weak_ptr<Parameter<ParamType>>;
+		//weak_ptr not used because System uses unique_ptr, not shared_ptr
+		using paramPtr = Parameter<ParamType>*;
+		using paramData = std::vector<ParamType>;
+		using dataMap = std::map<paramPtr, paramData>;
 
 		std::vector<paramPtr> probes;
-		std::vector<ParamType> data;
+		dataMap data;
 
 	public:
-		template<class ProbeType>
-		void monitor(ProbeType &&probe) {
+		void monitor(paramPtr probe) {
 			probes.emplace_back(probe);
+			data[probe] = {};
 		}
 		void capture() {
 			for (auto p : probes) {
-
+				data[p].emplace_back((*p)());
+			}
+		}
+		void display() {
+			for (auto p : probes) {
+				for (auto d : data[p]) {
+					std::cout << d << ' ';
+				}
+				std::cout << std::endl;
 			}
 		}
 	};
@@ -90,8 +102,12 @@ namespace glovebox {
 		ParamId root;
 		paramMap params;
 		Recorder<ParamType> recorder;
+		std::atomic_bool capture;
+		std::thread capture_thread;
 
 	public:
+
+
 
 		auto operator() (const ParamId param_id) {
 			return (*params.at(param_id))();
@@ -104,6 +120,29 @@ namespace glovebox {
 		void update() {
 			param(root)->update();
 		}
+		
+		template<class T>
+		void startCapture(const T period) {
+			stopCapture();
+			capture = true;
+			capture_thread = std::thread([this, period] {
+				while (capture) {
+					recorder.capture();
+					std::this_thread::sleep_for(period);
+				}
+			});
+		}
+
+		void stopCapture() {
+			capture = false;
+			if (capture_thread.joinable()) {
+				capture_thread.join();
+			}
+		}
+
+		void display() {
+			recorder.display();
+		}
 
 		void setRoot(const ParamId param_id) {
 			root = param_id; 
@@ -111,8 +150,9 @@ namespace glovebox {
 
 		void define(const ParamId param_id, const funcType func) {
 			//make_unique not used because Parameter's copy constructor is deleted
-			paramPtr param{ new Parameter<ParamType>{0, ALWAYS, func} };
-			params[param_id] = std::move(param);
+			paramPtr p{ new Parameter<ParamType>{0, ALWAYS, func} };
+			params[param_id] = std::move(p);
+			recorder.monitor(param(param_id));
 		}
 
 		void link(const ParamId src, const ParamId dest) {

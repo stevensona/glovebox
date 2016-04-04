@@ -71,29 +71,36 @@ namespace mission {
 		class Recorder {
 			//weak_ptr not used because System uses unique_ptr, not shared_ptr
 			using paramPtr = Parameter<ParamType>*;
-			using paramData = std::deque<ParamType>;
+			using paramData = std::vector<ParamType>;
 			using dataMap = std::map<paramPtr, paramData>;
 
 			std::vector<paramPtr> probes;
 			dataMap data;
+			int data_offset;
 			size_t memory;
 
 		public:
-			Recorder(const size_t memory) :memory{ memory } {}
-			void monitor(paramPtr probe) {
+
+			struct DataSet {
+				ParamType* data;
+				int offset;
+				size_t size;
+			};
+
+			Recorder(const size_t memory) :memory{ memory }, data_offset{ 0 } {}
+
+			void monitor(const paramPtr probe) {
 				probes.push_back(probe);
-				data[probe] = {};
+				data[probe] = paramData(memory);
 			}
 
 			//Save a snapshot of currently monitored values
 			void capture() {
 				for (auto p : probes) {
-					data[p].emplace_back((*p)());
-					//Remove oldest element if necessary to maintain size below the specified capacity
-					if (data[p].size() > memory) {
-						data[p].pop_front();
-					}
+					data[p][data_offset] = (*p)();
 				}
+				data_offset = (data_offset + 1) % (memory );
+
 			}
 
 			//Displays the contents of recorder memory to std::cout
@@ -104,6 +111,14 @@ namespace mission {
 					}
 					std::cout << std::endl;
 				}
+			}
+
+			auto getData(const paramPtr probe){
+				return DataSet{ &data[probe][0], data_offset, memory };
+			}
+
+			auto getDataOffset() const {
+				return data_offset;
 			}
 		};
 
@@ -124,6 +139,9 @@ namespace mission {
 		}
 
 	public:
+
+
+
 		void set(const ParamId param_id, const ParamType value) {
 			param(param_id)->setValue(value);
 		}
@@ -163,6 +181,10 @@ namespace mission {
 		//Displays the contents of the recorder. For debugging only
 		void display() {
 			recorder.display();
+		}
+
+		auto getData(const ParamId param_id) {
+			return recorder.getData(param(param_id));
 		}
 
 		//Identifies in the system what will be used as the "root" parameter

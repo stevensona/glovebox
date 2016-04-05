@@ -5,14 +5,16 @@
 #include <vector>
 #include <functional>
 #include <memory>
+#include <random>
 #include <atomic>
 
 namespace mission {
+	
 
-	const auto ALWAYS = [](){ return true; };
 
 	template <class ParamId, class ParamType>
 	class System {
+	
 
 		template <class ParamType>
 		class Parameter {
@@ -76,17 +78,17 @@ namespace mission {
 			std::vector<paramPtr> probes;
 			dataMap data;
 			int data_offset;
-			size_t memory;
+			int memory;
 
 		public:
 
 			struct DataSet {
 				ParamType* data;
 				int offset;
-				size_t size;
+				int size;
 			};
 
-			Recorder(const size_t memory) :memory{ memory }, data_offset{ 0 } {}
+			Recorder(const int memory) :memory{ memory }, data_offset{ 0 } {}
 
 			void monitor(const paramPtr probe) {
 				probes.push_back(probe);
@@ -115,7 +117,7 @@ namespace mission {
 			auto getData(const paramPtr probe){
 				return DataSet{ &data[probe][0], data_offset, memory };
 			}
-
+			
 			auto getDataOffset() const {
 				return data_offset;
 			}
@@ -139,6 +141,20 @@ namespace mission {
 
 	public:
 
+		//TODO: implement this in a cleaner way
+		static bool half() {
+			static std::default_random_engine rng{};
+			static std::uniform_int_distribution<int> dist{ 0, 1 };
+			return dist(rng) == 0;
+		}
+		static bool quarter() {
+			static std::default_random_engine rng{};
+			static std::uniform_int_distribution<int> dist{ 0, 3 };
+			return dist(rng) == 0;
+		}
+		static bool always() {
+			return true;
+		}
 
 
 		void set(const ParamId param_id, const ParamType value) {
@@ -194,9 +210,9 @@ namespace mission {
 
 		//Defines a system parameter's update function and applies a recorder
 		//probe to its value
-		void define(const ParamId param_id, const funcType func) {
+		void define(const ParamId param_id,  const funcType func, const condType cond = &always) {
 			//make_unique not used because Parameter's copy constructor is deleted
-			paramPtr p{ new Parameter<ParamType>{0, ALWAYS, func} };
+			paramPtr p{ new Parameter<ParamType>{0, cond, func} };
 			params[param_id] = std::move(p);
 			recorder.monitor(param(param_id));
 		}
